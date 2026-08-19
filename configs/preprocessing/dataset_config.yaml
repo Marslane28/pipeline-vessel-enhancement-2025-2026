@@ -1,0 +1,45 @@
+# dataset_config.yaml
+# ====================
+# Configuration unique pilotant le prétraitement pour les deux bases.
+# Chaque base déclare sa propre logique (resolver, masquage tissulaire ou non)
+# tout en partageant le même pipeline (resampling -> crop -> normalisation -> masquage optionnel).
+
+datasets:
+  ircad:
+    name: IRCAD
+    input_dir: "/Users/arslenebouhadjera/Stage_Arslène_2026/Documents/StageNoé2025/pipeline-vessel-enhancement-master/data/ircad/Chargement_des_données/données/vessel_labels"
+    resolver: ircad
+    bbox_source: liver
+    #apply_tissue_mask: true
+    #margin_px: 15
+
+  bullitt:
+    name: Bullitt
+    input_dir: "/Users/arslenebouhadjera/Stage_Arslène_2026/Documents/StageNoé2025/pipeline-vessel-enhancement-master/data/Bullitt_V2"
+    resolver: bullitt
+    bbox_source: brain
+    #apply_tissue_mask: true
+    #margin_px: 15
+  
+  vascusynth:
+    name: VascuSynth
+    input_dir: "/Users/arslenebouhadjera/Stage_Arslène_2026/Documents/StageNoé2025/pipeline-vessel-enhancement-master/data/March_2013_VascuSynth_Dataset"
+    output_dir: "data/vascusynth_preprocessed"
+    groups: null                          # null = tous les groupes
+    n_data_per_group: 12
+    generate_gt_mask: true                # GT = seuillage > 0
+    generate_bifurcation_mask: false       # ROI 3 (noyau gaussien 7x7x7)
+    generate_vessel_neighborhood: false    # ROI 2 (dilatation)
+    neighborhood_dilation_iterations: 3   # Pour ROI 2
+    noise_levels: [5.0, 10.0, 20.0]       # σ du bruit Rician
+
+resampling:
+  isotropic_finest: true
+  target_spacing: [1.0, 1.0, 1.0]
+
+normalization:
+  method: minmax
+  range: [0, 1]
+
+output:
+  root: "data/preprocessed_multi"

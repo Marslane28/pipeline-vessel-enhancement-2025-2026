@@ -1,0 +1,33 @@
+mode: "eigenvalues"
+results_dir: "eigenvalue_benchmark_results"
+seed: 42
+verbose: true
+plot: true
+
+geometry:
+  shape: [64, 64, 64]
+  sigma_vessel: 2.0
+  vessel_radius: 4.0
+
+methods:
+  custom:
+    - "farid"
+    - "cubic"
+    - "trigonometric"
+    - "catmull"
+    - "bspline"
+    - "bezier"
+    - "scharr"
+  skimage:
+    - "default"
+    - "gaussian"
+
+cases:
+  simple: "simple_vessel"
+  curved: "curved_vessel"
+  bifurcation: "bifurcation"
+
+noise:
+  snr_db: 20.0
+
+n_noise_realizations: 20

@@ -1,0 +1,58 @@
+# ----------------------------------------------------------------------
+# CONFIGURATION DE L'EXÉCUTION
+# ----------------------------------------------------------------------
+setup:
+  # Nom de l'expérience
+  name: "hessian"
+  # Utilisé pour nommer le dossier de sortie et les fichiers de log.
+
+  # Répertoire d'entrée des données
+  input_dir: "bullitt"
+  # Chemin relatif vers le dossier contenant les données.
+  # Options : ircad/3d-échantillonnées, vascusynth_preprocessed, bullitt
+
+  # Répertoire de sortie des résultats
+  output_dir: "Benchmark_results"
+  # Dossier où sont sauvegardés les résultats, figures et logs.
+  # Options : Benchmark_results, Benchmark_results_vascusynth, Benchmark_results_bullitt
+
+  # Fichier de log
+  log_file: "benchmark"
+  # Nom du fichier de log (sans extension).
+
+  # Mode debug
+  debug_mode: true
+  # true  : logs détaillés (DEBUG)
+  # false : logs standards (INFO)
+
+  # Mode affichage des figures
+  plot_mode: false
+  # true  : affiche les figures à l'écran pendant l'exécution
+  # false : n'affiche pas les figures (seulement sauvegarde)
+
+  # Mode sauvegarde
+  save_mode: true
+  # true  : sauvegarde les résultats, figures et données
+  # false : n'enregistre rien
+
+# ----------------------------------------------------------------------
+# DOSSIERS DES DONNÉES
+# ----------------------------------------------------------------------
+images_dir: "images"
+# Dossier des images brutes.
+# Chemin complet : input_dir + images_dir
+
+labels_dir: "labels"
+# Dossier des ground truth (annotations des vaisseaux).
+# Chemin complet : input_dir + labels_dir
+
+masks_dir: "masks"
+# Dossier des masques (foie, ROI).
+# Chemin complet : input_dir + masks_dir
+
+# ----------------------------------------------------------------------
+# SÉLECTION DES PATIENTS
+# ----------------------------------------------------------------------
+patient_ids: 01
+# null : charge tous les patients du dataset
+# si on veut tester unsous-ensemble de patients, on peut préciser une liste d'IDs ici.

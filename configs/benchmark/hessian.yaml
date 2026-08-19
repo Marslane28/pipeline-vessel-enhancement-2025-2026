@@ -1,0 +1,74 @@
+# ----------------------------------------------------------------------
+# MODE DU BENCHMARK
+# ----------------------------------------------------------------------
+mode: "hessian"
+# Détermine quelle classe de benchmark est instanciée.
+# Valeur fixe pour ce benchmark.
+
+# ----------------------------------------------------------------------
+# OPTIMISATION DES ÉCHELLES
+# ----------------------------------------------------------------------
+optimize_scales: false
+# false : utilise les échelles définies dans experiment.yaml
+# true  : recherche automatiquement les meilleures échelles
+# L'optimisation est coûteuse en calcul, désactivée par défaut.
+
+# ----------------------------------------------------------------------
+# DOSSIER DE SORTIE
+# ----------------------------------------------------------------------
+results_dir: "hessian"
+# Nom du sous-dossier créé dans le répertoire de sortie pour les résultats.
+
+# ----------------------------------------------------------------------
+# PARAMÈTRES DES OPÉRATEURS DE DÉRIVÉE
+# ----------------------------------------------------------------------
+params:
+  derivator:
+    #- "default"
+    #- "gaussian"
+    #- "farid"
+    #- "cubic"
+    - "trigonometric"
+    #- "catmull"
+    #- "bspline"
+    #- "bezier"
+    #- "scharr"
+# Préciser les opérateurs de dérivée à tester pour le calcul du Hessien.
+
+# ----------------------------------------------------------------------
+# GRILLE DE RECHERCHE DES HYPERPARAMÈTRES
+# ----------------------------------------------------------------------
+params_grid:
+  alpha: [0.2, 0.5, 0.9]
+  beta:  [0.1, 0.3, 0.5]
+  gamma: [1, 5, 10, 20]
+  # Commentés : paramètres du filtre de Frangi, si non utilisés.
+  
+  #tau: [0.1, 0.2, 0.25, 0.5, 0.75]
+  # Commenté : paramètre du filtre de Jerman, si non utilisé.
+
+  # Paramètres du filtre MFAT, actifs.
+  # Le runner filtre automatiquement les paramètres non pertinents
+  # selon la valeur de methods.enhancer dans experiment.yaml.
+  #mfat_tau: [0.01, 0.02, 0.05]
+  #mfat_tau2: [0.1, 0.2, 0.3]
+  #mfat_step_size: [0.1, 0.18, 0.25]
+  #variant: ["eigen", "proba"]
+# Le grid search teste toutes les combinaisons de ces paramètres.
+# La combinaison maximisant le MCC est retenue.
+
+# ----------------------------------------------------------------------
+# OPTIMISATION DES MÉTRIQUES
+# ----------------------------------------------------------------------
+optimization:
+  # Métriques à calculer
+  metrics: ["dice"]
+  #Exemple ici:
+  # "dice" : calcule uniquement le Dice
+  # "all"  : calcule toutes les métriques disponibles
+
+  # Paramètres de seuillage pour le grid search
+  thresholding:
+    fixed_value: null
+# fixed_value: null  -> le seuil est optimisé automatiquement via F1
+# fixed_value: 0.5   -> seuil fixé à 0.5, sans optimisation

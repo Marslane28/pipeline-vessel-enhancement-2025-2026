@@ -1,0 +1,27 @@
+name: my_gpu_env
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - cudatoolkit
+  - cupy
+  - pytorch
+  - torchvision
+  - dask
+  - imageio
+  - matplotlib
+  - monai
+  - nibabel
+  - numpy
+  - pytest
+  - pyyaml
+  - scikit-learn
+  - scipy
+  - simpleitk
+  - scikit-image
+  - tabulate
+  - tifffile
+  - tqdm

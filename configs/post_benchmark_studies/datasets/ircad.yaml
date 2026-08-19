@@ -1,0 +1,30 @@
+enhancer_dir: outputs/Benchmark_results/mfat/ircad_enhancer_mfat_2026-08-05_10-53-28
+labels_dir: data/ircad/3d-échantillonnées/labels
+masks_dir: data/ircad/3d-échantillonnées/masks
+case_prefix: "patient_"
+case_suffix: "_images.nii"
+result_prefix: "results_patient_"
+result_suffix: "_images.nii"
+has_subdirs: false
+patients:
+  - "01"
+  - "02"
+  - "03"
+  - "04"
+  - "05"
+  - "06"
+  - "07"
+  - "08"
+  - "09"
+  - "10"
+  - "11"
+  - "12"
+  - "13"
+  - "14"
+  - "15"
+  - "16"
+  - "17"
+  - "18"
+  - "19"
+  - "20"
+has_subdirs: false

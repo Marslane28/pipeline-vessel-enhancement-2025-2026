@@ -1,0 +1,38 @@
+# --- Cœur numérique / IO scientifique ---
+numpy
+scipy
+scikit-learn
+scikit-image
+pandas
+tifffile
+nibabel
+SimpleITK
+imageio
+
+# --- Visualisation / figures ---
+matplotlib
+seaborn
+vtk
+
+# --- Deep learning (requis par monai) ---
+torch
+monai
+
+# --- Parallélisation / calcul ---
+dask
+
+# --- Configuration / IO / logs ---
+PyYAML
+colorlog
+tabulate
+
+# --- CLI / suivi de progression ---
+tqdm
+
+# --- Tests ---
+pytest
+
+# --- GPU (optionnel — nécessite un GPU NVIDIA + CUDA 12.x) ---
+# Le pipeline détecte l'absence de GPU et bascule sur CPU (is_gpu_available_available()
+# dans core/utils/gpu.py) : sans GPU, tu peux commenter la ligne suivante.
+cupy-cuda12x

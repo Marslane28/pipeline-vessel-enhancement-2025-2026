@@ -1,0 +1,12 @@
+logs/
+outputs/
+tests/
+.DS_Store
+__MACOSX/
+__pycache__/
+*.py[cod]
+*.pyo
+.ipynb_checkpoints/
+*.swp
+*.swo
+*~

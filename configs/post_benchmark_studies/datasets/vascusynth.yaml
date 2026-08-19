@@ -1,0 +1,12 @@
+enhancer_dir: outputs/Jerman/vascusynth_enhancer_jerman_2026-07-18_09-32-01
+labels_dir: data/vascusynth_preprocessed/labels
+masks_dir: null
+case_prefix: ""
+case_suffix: ""
+result_prefix: "results_"
+result_suffix: ""
+has_subdirs: true
+# patients : liste vide dans le YAML, comme dans le DATASETS d'origine —
+# remplie au runtime par get_vascusynth_patients()/init_vascusynth_config()
+patients: []
+has_subdirs: false

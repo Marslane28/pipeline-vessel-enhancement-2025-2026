@@ -1,0 +1,84 @@
+# ============================================================
+# Configuration du pipeline IRCAD 3D-IRCADb-01
+# Étude : Impact de l'opérateur de dérivée sur le rehaussement vasculaire
+# ============================================================
+
+dataset:
+  base_path: "/Users/arslenebouhadjera/Stage_Arslène_2026/Documents/StageNoé2025/pipeline-vessel-enhancement-master/data/3Dircadb1"
+  n_patients: 20
+  patient_prefix: "3Dircadb1."
+
+  subfolders:
+    patient_dicom: "PATIENT_DICOM"
+    labelled_dicom: "LABELLED_DICOM"
+    masks_dicom: "MASKS_DICOM"
+    meshes_vtk: "MESHES_VTK"
+
+  liver_mask_names:
+    - "liver"
+    - "Liver"
+    - "LIVER"
+    - "foie"
+
+  vessel_mask_names:
+    artery:
+      - "artery"
+      - "hepaticartery"
+      - "arteries"
+      - "hepaticarterias"
+      - "arteires"
+      - "artere"
+    portalvein:
+      - "portalvein"
+      - "portal"
+      - "portalveins"
+      - "portalvein2"
+      - "portalhepatic"
+      - "veineporte"
+    venous:
+      - "venoussystem"
+      - "venous"
+      - "venoussl"
+      - "veins"
+      - "hepaticvenous"
+      - "veinessushepatiques"
+    hepaticveins:
+      - "hepaticveins"
+      - "hepaticvein"
+      - "liverveins"
+      - "veinehepatique"
+      - "hepaticvein2"
+      - "superhepatic"
+    venacava:
+      - "venacava"
+      - "cava"
+      - "ivc"
+      - "inferiorvenacava"
+      - "veinecave"
+# ============================================================
+# Logging et sorties
+# ============================================================
+output:
+  reports_dir: "Chargement_des_données/reports_Données"
+  figures_dir: "Chargement_des_données/figures_Données"
+  processed_dir: "Chargement_des_données/données"
+  log_level: "INFO_Chargement_des_données"
+  log_file: "Chargement_des_données/pipeline.log"
+
+classification:
+
+  metal_artifact:
+    hu_threshold: 2500
+    min_voxel_count: 500
+
+  low_contrast:
+    liver_background_diff_threshold: 30.0
+    liver_std_threshold: 20.0
+
+  organic_contact:
+    dilation_mm: 5
+    min_contact_voxels: 100
+
+  homogeneous_liver:
+    std_threshold: 20.0
+    liver_background_diff_min: 30.0

@@ -1,0 +1,8 @@
+# configs/post_benchmark_studies/cc_filtering/ircad.yaml
+dataset: ircad
+results_dir: outputs/Frangi/ircad_enhancer_frangi_XXXX-XX-XX_XX-XX-XX/results
+images_dir: data/ircad/images
+labels_dir: data/ircad/labels
+masks_dir: data/ircad/masks
+min_sizes: [0, 10, 50, 100, 200]
+output_dir: outputs/Frangi/ircad_enhancer_frangi_XXXX-XX-XX_XX-XX-XX/overview_cc/cc_filtering_delta

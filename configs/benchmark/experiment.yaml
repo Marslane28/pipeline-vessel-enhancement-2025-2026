@@ -1,0 +1,104 @@
+loading:
+  # Normaliser les intensités avant chargement
+  # IGNORÉ dans notre étude: la normalisation est gérée dans processing
+  normalize: false
+
+  # Recadrer les images (ROI)
+  # si besoin
+  crop: false
+
+  # Shape de sortie pour redimensionnement
+  # si besoin
+  target_shape: null
+
+  # Pattern des fichiers (remplace {patient} par l'ID)
+  # Utilisé par PatientLoader pour construire les chemins
+  raw_file: "{patient}_images.nii.gz"
+  gt_file: "{patient}_label.nii.gz"
+  mask_file: "{patient}_liver.nii.gz"
+
+  #  convertit scales_mm en voxels
+  #  via le spacing (voxel_size) lu dans l'en-tête NIfTI
+  use_physical_units: true
+
+# ------------------------------------------------------------
+# SÉLECTION DES ALGORITHMES
+# ------------------------------------------------------------
+methods:
+  # Opérateur de dérivée pour le calcul du Hessien
+  #   UTILISÉ SEULEMENT dans batch_fp_analysis() et
+  #   batch_bifurcation_analysis() pour comparer les opérateurs
+  #   En benchmark standard : opérateur fixé dans le code
+  derivator: default   # options: default, gaussian, farid, cubic, trigonometric, catmull, bspline, bezier, scharr
+
+  # Filtre de rehaussement des vaisseaux
+  #   Modifié par le paramètre --enhancer de la ligne de commande, mais le préciser ici pour le fihcier de config json aussi.
+  enhancer: Frangi        # options: frangi, jerman, mfat, steerable3d
+
+  # Méthode de binarisation
+  segmenter: thresholding   # options: thresholding
+
+# ------------------------------------------------------------
+# PARAMÈTRES DU HESSIEN
+# ------------------------------------------------------------
+hessian:
+  # Mode de gestion des bords pour les convolutions
+  mode: reflect   # options: reflect, constant, nearest, mirror, wrap
+
+# ------------------------------------------------------------
+# PARAMÈTRES DE TRAITEMENT / PERFORMANCE
+# ------------------------------------------------------------
+processing:
+  # Utiliser le GPU pour les calculs
+  use_gpu: False
+
+# ------------------------------------------------------------
+# PARAMÈTRES DES FILTRES D'AMÉLIORATION
+# ------------------------------------------------------------
+enhancement:
+  # ---------- FRANGI (utilisé uniquement si enhancer='frangi') ----------
+  # Paramètres du filtre de Frangi classique
+  #Valeurs par défaut si pas de grid search
+  # → Utilisés pour optimiser les échelles
+  alpha: 0.5      # Sensibilité aux structures tubulaires (0.5-1.0)
+  beta: 0.5       # Sensibilité aux structures plates (0.5-1.0)
+  gamma: 5        # Sensibilité au bruit (plus élevé = moins de bruit)
+
+  # ---------- JERMAN (utilisé uniquement si enhancer='jerman') ----------
+  # tau: 0.20     # COMMENTÉ : seuil Jerman (0.1-0.5)
+                  # → Décommenter pour utiliser Jerman
+
+  # ---------- MFAT (utilisé uniquement si enhancer='mfat') ----------
+  # → À DÉCOMMENTER pour utiliser MFAT
+  # mfat_tau: 0.02         
+  # mfat_tau2: 0.2         
+  # mfat_step_size: 0.18   
+  # variant: eigen        
+
+  # Utiliser l'implémentation scikit-image de Frangi, mais ici on utilise notre propre implémentation pour plus de flexibilité et de contrôle sur les paramètres.
+  skimage: false
+
+  # Échelles du filtre (en mm avec use_physical_units=true)
+  #   Converties en voxels via le spacing de l'image
+  #   Utilisées par le filtre pour détecter les vaisseaux
+  #   à différentes tailles
+  scales_mm: [1.8, 1.86667, 1.93333, 2.0]   # IRCAD (actif)
+  # scales_mm: [0.6, 1.2, 1.8, 2.4]         # Bullitt (vaisseaux fins)
+  # scales_mm: [1.8, 2.13333, 2.46667, 2.8] # VascuSynth
+
+  # Détection des vaisseaux sombres
+  #  TOUJOURS UTILISÉ
+  #   false = vaisseaux clairs sur fond sombre (standard)
+  #   true = vaisseaux sombres sur fond clair
+  #   null = detection automatique via le ground truth (si fourni)
+  black_ridges: null
+
+# ------------------------------------------------------------
+# PARAMÈTRES DE SEGMENTATION / SEUIL
+# ------------------------------------------------------------
+segmentation:
+  # Seuil de binarisation
+  # → null + GT fourni = optimisation automatique du F1
+  # → null + pas de GT = seuil par défaut 0.5
+  # → valeur fixe = seuil manuel
+  threshold: null
