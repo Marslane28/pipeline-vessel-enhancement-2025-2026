@@ -84,7 +84,6 @@ def format_threshold_info(op_data):
 def load_patient_data(patient_id):
     """Charge toutes les données pour un patient"""
     
-    # Image originale
 
     image_file = IMAGES_DIR / f"patient_{patient_id}_images.nii.gz"
     if not image_file.exists():
@@ -94,7 +93,6 @@ def load_patient_data(patient_id):
     raw_data = raw_img.get_fdata()
     raw_norm = (raw_data - raw_data.min()) / (raw_data.max() - raw_data.min() + 1e-8)
     
-    # Ground truth
     label_file = LABELS_DIR / f"patient_{patient_id}_label.nii.gz"
     if not label_file.exists():
         raise FileNotFoundError(f"GT non trouvé: {label_file}")
@@ -102,7 +100,6 @@ def load_patient_data(patient_id):
     gt_img = nib.load(label_file)
     gt_data = gt_img.get_fdata() > 0.5
     
-    # Résultats
     result_file = RESULTS_DIR / f"results_patient_{patient_id}_images.nii"
     if not result_file.exists():
         raise FileNotFoundError(f"Résultats non trouvés: {result_file}")
@@ -126,12 +123,10 @@ def process_patient(patient_id):
     
     print(f"\n Patient {patient_id}")
     
-    # Chargement des données
     raw_norm, gt_data, results = load_patient_data(patient_id)
     best_z = get_best_slice(gt_data)
     print(f"Coupe: z={best_z}, GT: {gt_data.sum():,} voxels")
     
-    # Création de la figure
     n_rows = len(OPERATORS) + 1
     n_cols = 4
     
@@ -139,32 +134,26 @@ def process_patient(patient_id):
     fig.suptitle(f'Patient {patient_id} - Comparaison des 8 opérateurs (coupe z={best_z})',
                  fontsize=18, fontweight='bold')
     
-    # LIGNE 0: GROUND TRUTH
     
-    # GT - Originale
     axes[0, 0].imshow(raw_norm[:, :, best_z], cmap='gray')
     axes[0, 0].set_title('Image originale', fontsize=12, fontweight='bold')
     axes[0, 0].axis('off')
     
-    # GT - Information
     axes[0, 1].text(0.5, 0.5, 'GROUND TRUTH\n(Référence)', ha='center', va='center',
                     transform=axes[0, 1].transAxes, fontsize=14, fontweight='bold')
     axes[0, 1].axis('off')
     
-    # GT - Masque
     gt_slice = gt_data[:, :, best_z]
     axes[0, 2].imshow(gt_slice, cmap='gray')
     axes[0, 2].set_title(f'Masque GT\n{gt_slice.sum():,} voxels', fontsize=12)
     axes[0, 2].axis('off')
     
-    # GT - Overlay
     display_gt = np.stack([raw_norm[:, :, best_z]] * 3, axis=-1)
     display_gt[gt_slice] = [0, 1, 0] # Vert pour GT
     axes[0, 3].imshow(np.clip(display_gt, 0, 1), origin='lower')
     axes[0, 3].set_title('GT overlay (vert)', fontsize=12)
     axes[0, 3].axis('off')
     
-    # LIGNES 1-8: OPÉRATEURS
     
     derivators = results.get('derivator', results)
     
@@ -181,20 +170,15 @@ def process_patient(patient_id):
         
         op_data = derivators[op_name]
         
-        # Extraire l'enhancement (vesselness)
         enh_data = getattr(op_data, 'data_enhanced', getattr(op_data, 'enhanced', None))
         
-        # Extraire la segmentation - DÉJÀ BINAIRE !
         seg_data = getattr(op_data, 'data_segmented', getattr(op_data, 'segmented', None))
         
-        # CORRECTION CRUCIALE : Utiliser directement la segmentation binaire
         if seg_data is not None:
-            # seg_data est déjà binaire (0/1), on le caste en bool
             pred_bin = seg_data.astype(bool)
         else:
             pred_bin = None
         
-        # Calculer les métriques
         if pred_bin is not None:
             dice = compute_dice(pred_bin, gt_data)
             tp, fp, fn, tn = compute_metrics(pred_bin, gt_data)
@@ -202,20 +186,16 @@ def process_patient(patient_id):
             dice = 0.0
             tp, fp, fn, tn = 0, 0, 0, 0
         
-        # Récupérer clDice
         cldice = getattr(op_data, 'cldice_score', getattr(op_data, 'cldice', 0.0))
         
-        # Formater l'information du seuil pour affichage
         threshold_info = format_threshold_info(op_data)
         
-        # --- Colonne 0: Image + Nom opérateur ---
         axes[row, 0].imshow(raw_norm[:, :, best_z], cmap='gray')
         axes[row, 0].axis('off')
         axes[row, 0].text(0.5, 0.05, op_name.upper(), transform=axes[row, 0].transAxes,
                           fontsize=14, fontweight='bold', ha='center', va='bottom',
                           bbox=dict(boxstyle='round,pad=0.3', facecolor='white', alpha=0.8))
         
-        # --- Colonne 1: Vesselness (enhancement) ---
         if enh_data is not None:
             enh_slice = enh_data[:, :, best_z]
             enh_min, enh_max = enh_slice.min(), enh_slice.max()
@@ -230,16 +210,13 @@ def process_patient(patient_id):
                              transform=axes[row, 1].transAxes, fontsize=12)
         axes[row, 1].axis('off')
         
-        # --- Colonne 2: Masque final avec Dice ---
         if pred_bin is not None:
             pred_slice = pred_bin[:, :, best_z]
             axes[row, 2].imshow(pred_slice, cmap='gray')
             
-            # Afficher Dice avec code couleur
             dice_color = 'green'if dice > 0.5 else 'orange'if dice > 0.2 else 'red'
             axes[row, 2].set_title(f'Dice = {dice:.4f}', fontsize=14, fontweight='bold', color=dice_color)
             
-            # Informations supplémentaires
             info_text = f'voxels: {pred_slice.sum():,}'
             if threshold_info != "N/A":
                 info_text += f'\n{threshold_info}'
@@ -252,26 +229,22 @@ def process_patient(patient_id):
                              transform=axes[row, 2].transAxes, fontsize=12)
         axes[row, 2].axis('off')
         
-        # --- Colonne 3: Overlay avec métriques ---
         display_overlay = np.stack([raw_norm[:, :, best_z]] * 3, axis=-1)
         
         if pred_bin is not None:
             pred_slice = pred_bin[:, :, best_z]
             gt_slice = gt_data[:, :, best_z]
             
-            # Créer les masques
             tp_mask = np.logical_and(gt_slice, pred_slice)
             fn_mask = np.logical_and(gt_slice, ~pred_slice)
             fp_mask = np.logical_and(~gt_slice, pred_slice)
             
-            # Appliquer les couleurs
             display_overlay[tp_mask] = COLORS['tp'] # Jaune
             display_overlay[fn_mask] = COLORS['fn'] # Vert
             display_overlay[fp_mask] = COLORS['fp'] # Rouge
         
         axes[row, 3].imshow(np.clip(display_overlay, 0, 1), origin='lower')
         
-        # Afficher les métriques détaillées
         if pred_bin is not None:
             metric_text = f'TP={tp:,} FP={fp:,}\nFN={fn:,} clDice={cldice:.3f}'
             axes[row, 3].text(0.05, 0.95, metric_text, transform=axes[row, 3].transAxes,
@@ -281,11 +254,9 @@ def process_patient(patient_id):
         axes[row, 3].set_title('Overlay', fontsize=11)
         axes[row, 3].axis('off')
         
-        # Log pour suivi
         print(f"{op_name.upper()}: Dice={dice:.4f}, clDice={cldice:.3f}, "
               f"TP={tp:,}, FP={fp:,}, FN={fn:,}, {threshold_info}")
     
-    # Légende
     from matplotlib.patches import Patch
     legend_elements = [
         Patch(facecolor='green', alpha=0.7, label='GT seul (FN)'),
@@ -305,7 +276,6 @@ def process_patient(patient_id):
     print(f"\n Sauvegardé: {output_file.name}")
     return True
 
-# BOUCLE SUR TOUS LES PATIENTS
 
 print("\n"+ "="*60)
 print("GÉNÉRATION DES FIGURES POUR TOUS LES PATIENTS")

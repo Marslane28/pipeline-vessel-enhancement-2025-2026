@@ -18,7 +18,6 @@ Convention pour un vaisseau tubulaire :
   λ₃ ≈ 0 (direction axiale)
   v₃ = vecteur propre de λ₃ = axe du vaisseau
 """
-# je voudrais
 
 import numpy as np
 import matplotlib.pyplot as plt

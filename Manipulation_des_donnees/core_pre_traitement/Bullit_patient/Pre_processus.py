@@ -4,26 +4,14 @@ import SimpleITK as sitk
 
 class TissueProcessor:
 
-    # ------------------------------------------------------------------
-    # 1. Spacing isotrope = résolution la plus fine du volume d'origine
-    # ------------------------------------------------------------------
     @staticmethod
     def finest_spacing(image: sitk.Image) -> tuple[float, float, float]:
         finest = min(image.GetSpacing())
         return (finest, finest, finest)
 
-    # ------------------------------------------------------------------
-    # 2. Recadrage spatial (bounding box + marge)
-    # ------------------------------------------------------------------
     @staticmethod
     def compute_bbox(mask_image: sitk.Image, margin_px: int = 15):
-        """
-        Calcule la bounding box (index, pas de coordonnées physiques) du
-        masque binaire `mask_image`, avec une marge de `margin_px` voxels
-        de chaque côté (clampée aux bords du volume).
 
-        Retourne (bbox_min, bbox_max) en (x, y, z), inclusif.
-        """
         arr = sitk.GetArrayFromImage(mask_image)  # ordre (z, y, x)
         coords = np.argwhere(arr > 0)
         if coords.size == 0:
@@ -49,9 +37,7 @@ class TissueProcessor:
         index = [int(v) for v in bbox_min]
         return sitk.RegionOfInterest(image, size=size, index=index)
 
-    # ------------------------------------------------------------------
-    # 3. Normalisation min-max -> [0, 1]
-    # ------------------------------------------------------------------
+
     
     @staticmethod
     def normalize_minmax(image: sitk.Image) -> sitk.Image:
@@ -66,10 +52,7 @@ class TissueProcessor:
         return out
     
 
-    # ------------------------------------------------------------------
-    # 5. Masquage tissulaire (appliqué APRÈS normalisation, donc peut
-    #    diminuer la borne haute -> dynamique [0,1] non garantie ensuite)
-    # ------------------------------------------------------------------
+
     @staticmethod
     def apply_mask(image: sitk.Image, mask_image: sitk.Image) -> sitk.Image:
         arr = sitk.GetArrayFromImage(image)

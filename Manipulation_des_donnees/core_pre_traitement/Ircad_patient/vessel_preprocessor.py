@@ -1,8 +1,3 @@
-"""
-Orchestre le preprocessing complet du dataset :
-    PatientFileResolver → Resampler → ReportGenerator
-"""
-
 import time
 from pathlib import Path
 
@@ -15,12 +10,6 @@ from report_generator import ReportGenerator
 
 
 class VesselPreprocessor:
-    """
-    Prétraite un dataset de vaisseaux vers un espacement isotrope (1×1×1 mm³)
-    en appliquant :
-      - interpolation B-spline (ordre 3) pour les images CT
-      - interpolation nearest neighbor pour les masques / GT
-    """
 
     def __init__(self, input_dir: str | Path, output_dir: str | Path,
                  target_spacing: tuple[float, float, float] = (1.0, 1.0, 1.0),apply_liver_mask: bool = True):
@@ -36,12 +25,11 @@ class VesselPreprocessor:
 
 
     def run(self, n_patients: int = 20):
-        """Lance le preprocessing sur tous les patients trouvés."""
         self._print_header()
         if self.apply_liver_mask:
             print("Vaisseaux DANS le foie uniquement")
         else:
-            print("VERSION CORRIGÉE : Tous les vaisseaux")
+            print("Tous les vaisseaux")
         self.output_dir.mkdir(parents=True, exist_ok=True)
 
         patient_ids = self.resolver.get_patient_ids(n_patients)

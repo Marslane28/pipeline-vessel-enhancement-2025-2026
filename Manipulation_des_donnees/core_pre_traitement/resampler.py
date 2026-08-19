@@ -2,16 +2,12 @@ import SimpleITK as sitk
 
 
 class Resampler:
-    """
-    Rééchantillonne des volumes SimpleITK vers un espacement cible.
-    """
+
 
     def __init__(self, target_spacing: tuple[float, float, float] = (1.0, 1.0, 1.0)):
         self.target_spacing = target_spacing
 
-    # ------------------------------------------------------------------
     # Helpers
-    # ------------------------------------------------------------------
 
     def _compute_new_size(self, image: sitk.Image, output_spacing: tuple) -> list[int]:
         original_spacing = image.GetSpacing()
@@ -33,16 +29,11 @@ class Resampler:
         r.SetDefaultPixelValue(0)
         return r
 
-    # ------------------------------------------------------------------
     # API publique
-    # ------------------------------------------------------------------
 
     def resample_image(self, image: sitk.Image,
                        output_spacing: tuple = None) -> sitk.Image:
-        """
-        Rééchantillonne une image CT avec interpolation B-spline (ordre 3).
-        À utiliser pour les images d'intensité.
-        """
+
         output_spacing = output_spacing or self.target_spacing
         r = self._base_resampler(image, sitk.sitkBSpline, output_spacing)
         return r.Execute(image)
@@ -50,11 +41,7 @@ class Resampler:
     def resample_mask(self, mask: sitk.Image,
                       reference_image: sitk.Image = None,
                       output_spacing: tuple = None) -> sitk.Image:
-        """
-        Rééchantillonne un masque binaire (GT, foie…) avec nearest neighbor.
-        Si reference_image est fourni, aligne le masque sur cette image
-        (garantit une correspondance parfaite pixel à pixel).
-        """
+
         if reference_image is not None:
             r = sitk.ResampleImageFilter()
             r.SetReferenceImage(reference_image)

@@ -78,10 +78,8 @@ DATASETS: Dict[str, DatasetConfig] = {
 DPI = 180
 CONNECTIVITY_26 = np.ones((3, 3, 3), dtype=bool)
 
-# Dilation en pixels pour la visualisation 2D (réduite vs v1 qui utilisait 3x3
-# systématiquement -> gonflait la surface visuelle x9 par voxel isolé)
-DILATION_SIZE = 1 # 1 = pas de gonflement artificiel, structure = np.ones((1,1)) équivalent
 
+DILATION_SIZE = 1 
 # Marge (en pixels) ajoutée autour de la bounding box lors du recadrage
 CROP_MARGIN = 15
 
@@ -103,8 +101,7 @@ CATEGORY_LABELS = {
     "consensus": "Consensus total (tous)",
 }
 
-# Code catégorie réservé au "fond"(aucun opérateur, count == 0).
-# Doit être négatif et distinct de 0..3 pour ne jamais être peint.
+
 BACKGROUND_CAT = -1
 
 METRIC_NAMES = [
@@ -208,10 +205,7 @@ def _find_result_file(dataset: str, case_id: str) -> Optional[Path]:
     return result_file if result_file.exists() else None
 
 def load_pickle_once(dataset: str, case_id: str, debug: bool = False) -> Optional[Dict[str, Any]]:
-    """[OPTIM] Charge le pickle d'un patient UNE seule fois (toutes les clés 'derivator').
-    Auparavant load_pickled_segmentation ré-ouvrait et dé-picklait le même fichier
-    une fois par opérateur (9 lectures disque + unpickle par patient). On charge
-    maintenant le dict complet une fois et on le réutilise pour tous les opérateurs."""
+
     result_file = _find_result_file(dataset, case_id)
     if result_file is None:
         return None
@@ -242,7 +236,6 @@ def extract_segmentation(derivator_dict: Optional[Dict[str, Any]], operator: str
     return None
 
 def load_ground_truth(dataset: str, case_id: str) -> Optional[np.ndarray]:
-    """[FIX GT] Utilisé désormais par tous les tests, pas seulement le sweep (a)."""
     import nibabel as nib
     cfg = DATASETS[dataset]
     if not cfg.labels_dir.exists():
@@ -520,19 +513,7 @@ def compute_consensus_stack(skeletons: Dict[str, np.ndarray]) -> Tuple[Optional[
 
 
 def categorize_counts(counts: np.ndarray, n_ops: int) -> np.ndarray:
-    """Retourne un array d'entiers correspondant aux 4 catégories de détection,
-    avec BACKGROUND_CAT (-1) réservé aux voxels que PERSONNE n'a détectés
-    (count == 0).
 
-    
-    initialisait `cat` à 0 par défaut (np.zeros_like), ce qui
-    faisait que count==0 (fond, aucun opérateur) et count==1 (un seul opérateur,
-    catégorie "unique") recevaient la MÊME couleur rouge. Après dilatation du
-    squelette pour l'affichage, les pixels de fond ajoutés par la dilatation
-    héritaient donc à tort de la couleur "unique", gonflant artificiellement le
-    rouge visible sur les figures. Ici, le fond est explicitement exclu (-1) et
-    n'est jamais peint.
-    """
     half = n_ops / 2.0
     cat = np.full(counts.shape, BACKGROUND_CAT, dtype=np.int8)
     cat[counts == 1] = 0 # unique
@@ -575,8 +556,7 @@ def maximum_intensity_projection_3d(volume: np.ndarray, axis: int = 2) -> Option
 
 
 def get_crop_bbox(mask: np.ndarray, margin: int = CROP_MARGIN) -> Tuple[slice, slice]:
-    """Bounding box (2D) du contenu non-nul, avec marge. Évite les figures
-    à 70% d'espace vide (problème IRCAD en v1)."""
+
     if mask is None or mask.sum() == 0:
         return slice(0, mask.shape[0]), slice(0, mask.shape[1])
     ys, xs = np.where(mask)
@@ -646,10 +626,6 @@ def plot_operator_consensus_mip(
                                 CATEGORY_COLORS["majoritaire"], CATEGORY_COLORS["consensus"]])
     cat_norm = BoundaryNorm([-0.5, 0.5, 1.5, 2.5, 3.5], cat_cmap.N)
 
-    # BoundaryNorm ne gère pas les valeurs négatives (BACKGROUND_CAT = -1) ->
-    # on clippe uniquement pour le lookup couleur ; le fond sera de toute façon
-    # exclu via real_detection_mask avant d'être peint, donc sa couleur ici
-    # n'a pas d'importance (jamais utilisée).
     cat_proj_for_color = np.clip(cat_proj, 0, 3)
     color_proj = cat_cmap(cat_norm(cat_proj_for_color))[:, :, :3]
 
@@ -668,12 +644,7 @@ def plot_operator_consensus_mip(
         return ndi_dilation(m, dil_struct)
 
     def paintable_mask(skel_mask_2d: np.ndarray) -> np.ndarray:
-        """Dilate le squelette 2D pour la lisibilité visuelle, MAIS n'autorise
-        jamais à peindre un pixel de pur fond (count==0). C'est le correctif
-        clé : avant, `dilate_2d(skel_proj)` seul décidait des pixels peints,
-        et une bonne partie du halo de dilatation tombait sur du fond réel,
-        colorié à tort en rouge 'unique'à cause du bug de categorize_counts.
-        """
+
         dilated = dilate_2d(skel_mask_2d)
         return dilated & real_detection_mask
 

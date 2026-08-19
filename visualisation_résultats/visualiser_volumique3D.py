@@ -28,14 +28,12 @@ OPERATORS = ['default', 'gaussian', 'farid', 'cubic', 'trigonometric',
 
 PATIENTS = [f"{i:02d}"for i in range(1, 34)]
 
-# =============================================================================
 # LABELS DE LA MATRICE DE CONFUSION
 # 0 = background (hors foie)
 # 1 = TN vrai négatif foie non vasculaire, non prédit
 # 2 = TP vrai positif GT ∩ Pred
 # 3 = FP faux positif Pred \ GT
 # 4 = FN faux négatif GT \ Pred
-# =============================================================================
 
 LABEL_BG = 0
 LABEL_TN = 1
@@ -103,11 +101,7 @@ def build_confusion_label(gt_b: np.ndarray, pred_b: np.ndarray,
 
 
 def label_to_rgb(label: np.ndarray) -> np.ndarray:
-    """
-    Convertit le label map (X,Y,Z) en volume RGBA float32 (X,Y,Z,4).
-    Canal A = 1.0 pour tous les voxels non-background.
-    Compatible Bio-Formats / ImageJ RGB Stack.
-    """
+    
     rgb = np.zeros((*label.shape, 4), dtype=np.float32)
     for lbl, color in LABEL_COLORS_RGB.items():
         mask = label == lbl

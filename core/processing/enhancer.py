@@ -528,7 +528,7 @@ class Enhancer:
                     fat = xp.sqrt(num) / xp.sqrt(denom)
 
                 fat = xp.sqrt(1.5) * fat
-                response = 1.0 - fat # imcomplement
+                response = 1.0 - fat 
 
             # --- restrictions (Eq. 10 pour la 3D / bloc équivalent 2D) ---
             x = lambda_rho - lambda2

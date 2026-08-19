@@ -481,7 +481,6 @@ class BenchmarkRunner:
             csv_path = Path(self.saver.output_dir) / "fp_batch_summary.csv"
             csv_path.parent.mkdir(parents=True, exist_ok=True)
 
-        # Reprise après crash : identifier les lignes déjà traitées
         done_pairs: set[tuple[str, str]] = set()
         if csv_path is not None and csv_path.exists():
             try:

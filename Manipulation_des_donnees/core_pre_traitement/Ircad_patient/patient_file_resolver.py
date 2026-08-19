@@ -23,7 +23,6 @@ class PatientFileResolver:
     def __init__(self, input_dir: str | Path):
         self.input_dir = Path(input_dir)
 
-    # ------------------------------------------------------------------
 
     def get_patient_ids(self, n_patients: int = 20) -> list[str]:
         """

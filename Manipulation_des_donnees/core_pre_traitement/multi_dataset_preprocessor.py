@@ -1,3 +1,5 @@
+
+#inspiré par LAMY 2020
 from __future__ import annotations
 
 import argparse
@@ -144,7 +146,6 @@ class VascuSynthConfig:
 
 # Utilitaires SimpleITK partagés
 class ImageOps:
-    """Opérations bas-niveau réutilisées par les deux préprocesseurs."""
 
     @staticmethod
     def resample_to_spacing(
@@ -572,9 +573,7 @@ class BullittPreprocessor:
         return {"patient_id": patient_id, "status": "failed", "error": error}
 
 
-    # ------------------------------------------------------------------- #
     # Pipeline
-    # ------------------------------------------------------------------- #
     def run(self) -> None:
         self._print_header()
         self.config.output_dir.mkdir(parents=True, exist_ok=True)
@@ -607,9 +606,7 @@ class BullittPreprocessor:
         else:
             print(f"FAIL {result['patient_id']}: {result.get('error', 'Erreur')}")
 
-    # ------------------------------------------------------------------- #
     # Volume unique
-    # ------------------------------------------------------------------- #
     def _process_volume(self) -> dict:
         start = time.time()
         dataset_name = self.config.dataset_name
@@ -735,17 +732,6 @@ class BullittPreprocessor:
 
 # VascuSynth
 class VascuSynthPreprocessor:
-    """
-    Préprocessing VascuSynth 100% conforme à l'article Lamy et al. (ICPR 2020).
-    
-    Différences avec l'approche précédente :
-    - GT = seuillage > 0 de l'image brute (PAS de rastérisation)
-    - Ajout du biais (illumination) avec 3 gaussiennes
-    - Ajout du bruit Rician (3 niveaux : σ = 5, 10, 20)
-    - Génération du masque des bifurcations (ROI 3)
-    - Génération du masque du voisinage des vaisseaux (ROI 2)
-    - Sélection des cas data 7, 9, 11 (complexités 31, 41, 51)
-    """
 
     def __init__(self, config: VascuSynthConfig):
         self.config = config
@@ -887,7 +873,6 @@ class VascuSynthPreprocessor:
 
 # Orchestrateur
 class MultiDatasetPreprocessor:
-    """Orchestre le préprocessing pour un ou plusieurs datasets."""
 
     def __init__(self, config_path: str):
         with open(config_path, encoding="utf-8") as f:
