@@ -7,7 +7,7 @@ setup:
   # Utilisé pour nommer le dossier de sortie et les fichiers de log.
 
   # Répertoire d'entrée des données
-  input_dir: "bullitt"
+  input_dir: "ircad/3d-échantillonnées"
   # Chemin relatif vers le dossier contenant les données.
   # Options : ircad/3d-échantillonnées, vascusynth_preprocessed, bullitt
 
