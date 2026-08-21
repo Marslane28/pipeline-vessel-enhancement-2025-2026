@@ -7,7 +7,7 @@
 datasets:
   ircad:
     name: IRCAD
-    input_dir: "/Users/arslenebouhadjera/Stage_Arslène_2026/Documents/StageNoé2025/pipeline-vessel-enhancement-master/data/ircad/Chargement_des_données/données/vessel_labels"
+    input_dir: "data/ircad/Chargement_des_données/données/vessel_labels"
     resolver: ircad
     bbox_source: liver
     #apply_tissue_mask: true
@@ -15,7 +15,7 @@ datasets:
 
   bullitt:
     name: Bullitt
-    input_dir: "/Users/arslenebouhadjera/Stage_Arslène_2026/Documents/StageNoé2025/pipeline-vessel-enhancement-master/data/Bullitt_V2"
+    input_dir: "pipeline-vessel-enhancement-master/data/Bullitt_V2"
     resolver: bullitt
     bbox_source: brain
     #apply_tissue_mask: true
@@ -23,7 +23,7 @@ datasets:
   
   vascusynth:
     name: VascuSynth
-    input_dir: "/Users/arslenebouhadjera/Stage_Arslène_2026/Documents/StageNoé2025/pipeline-vessel-enhancement-master/data/March_2013_VascuSynth_Dataset"
+    input_dir: "data/March_2013_VascuSynth_Dataset"
     output_dir: "data/vascusynth_preprocessed"
     groups: null                          # null = tous les groupes
     n_data_per_group: 12
