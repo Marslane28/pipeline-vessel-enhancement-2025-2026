@@ -83,7 +83,7 @@ enhancement:
   #   Utilisées par le filtre pour détecter les vaisseaux
   #   à différentes tailles
   scales_mm: [1.8, 1.86667, 1.93333, 2.0]   # IRCAD (actif)
-  # scales_mm: [0.6, 1.2, 1.8, 2.4]         # Bullitt (vaisseaux fins)
+  #scales_mm: [0.6, 1.2, 1.8, 2.4]         # Bullitt (vaisseaux fins)
   # scales_mm: [1.8, 2.13333, 2.46667, 2.8] # VascuSynth
 
   # Détection des vaisseaux sombres

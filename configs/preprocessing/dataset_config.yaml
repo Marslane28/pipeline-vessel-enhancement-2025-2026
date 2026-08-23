@@ -7,7 +7,7 @@
 datasets:
   ircad:
     name: IRCAD
-    input_dir: "data/ircad/Chargement_des_données/données/vessel_labels"
+    input_dir: "data/3Dircadb1"
     resolver: ircad
     bbox_source: liver
     #apply_tissue_mask: true

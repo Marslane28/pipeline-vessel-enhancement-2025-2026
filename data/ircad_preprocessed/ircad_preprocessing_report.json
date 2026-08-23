@@ -1,0 +1,75 @@
+{
+  "title": "IRCAD Preprocessing Report",
+  "date": "2026-08-23T12:49:28.443540",
+  "dataset": "ircad",
+  "reference": "Vesselness Filters: A Survey with Benchmarks Applied to Liver Imaging (ICPR 2020)",
+  "target_spacing": [
+    1.0,
+    1.0,
+    1.0
+  ],
+  "summary": {
+    "total": 1,
+    "successful": 1,
+    "failed": 0,
+    "total_time": 2.365917921066284,
+    "avg_time": 2.365917921066284
+  },
+  "statistics": {
+    "count": 1,
+    "avg_original_spacing": [
+      0.5699999928474426,
+      0.5699999928474426,
+      1.600000023841858
+    ],
+    "spacing_std": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "avg_original_size": [
+      512,
+      512,
+      129
+    ],
+    "patients_count": 1,
+    "liver_mask_applied": true,
+    "has_vessels_gt": 0,
+    "vessels_gt_rate": 0.0
+  },
+  "results": [
+    {
+      "patient_id": "3Dircadb1.1",
+      "status": "success",
+      "dataset": "ircad",
+      "version": "in_liver",
+      "original_spacing": [
+        0.5699999928474426,
+        0.5699999928474426,
+        1.600000023841858
+      ],
+      "original_size": [
+        512,
+        512,
+        129
+      ],
+      "new_spacing": [
+        1.0,
+        1.0,
+        1.0
+      ],
+      "new_size": [
+        292,
+        292,
+        206
+      ],
+      "processed_files": {
+        "image": "data/ircad_preprocessed/images/patient_01_images.nii.gz",
+        "mask": "data/ircad_preprocessed/masks/patient_01_liver.nii.gz",
+        "label": "data/ircad_preprocessed/labels/patient_01_label.nii.gz"
+      },
+      "time_seconds": 2.365917921066284
+    }
+  ],
+  "errors": []
+}

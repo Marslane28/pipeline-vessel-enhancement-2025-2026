@@ -12,7 +12,7 @@ Le dépôt regroupe quatre niveaux d'expérimentation :
 > **Important — lecture du dépôt**
 >
 > Le dossier `core/` contient le pipeline principal actuellement utilisé pour les benchmarks. Les dossiers `core/Hessian_evaluation/`, `Manipulation_des_donnees/`, `docs/` et `visualisation_résultats/` regroupent principalement les études auxiliaires, l'exploration/préparation des données et les outils de visualisation. Ils ne sont pas tous nécessaires pour exécuter le benchmark principal.
-
+ ATTENTION: Pour lancer une dataset modifiez le chemain, l'échelle appropriée.. 
 ---
 
 ## 1. Vue d'ensemble

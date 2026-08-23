@@ -1,4 +1,3 @@
-
 #inspiré par LAMY 2020
 from __future__ import annotations
 
@@ -313,10 +312,11 @@ class IRCADPreprocessor:
         self.resampler = Resampler(config.target_spacing)
         self.reporter = ReportGenerator(config.output_dir, config.target_spacing)
         self.results: list[dict] = []
+        self.ops = ImageOps()
 
     def run(self) -> None:
         self._print_header()
-        self.config.output_dir.mkdir(parents=True, exist_ok=True)
+        self.images_dir, self.labels_dir, self.masks_dir = self._make_output_dirs()
 
         patient_ids = self.resolver.get_patient_ids(self.config.n_patients)
         if not patient_ids:
@@ -325,31 +325,39 @@ class IRCADPreprocessor:
 
         print(f"\n{len(patient_ids)} patient(s) trouvé(s).\n")
 
-        for pid in tqdm(patient_ids, desc="Preprocessing IRCAD"):
-            result = self._process_patient(pid)
+        for idx, pid in enumerate(tqdm(patient_ids, desc="Preprocessing IRCAD"), 1):
+            result = self._process_patient(pid, idx)
             self.results.append(result)
-            self._log_result(pid, result)
+            self._log_result(pid, idx, result)
 
         self.reporter.generate(self.results)
 
+    def _make_output_dirs(self) -> Tuple[Path, Path, Path]:
+        images_dir = self.config.output_dir / "images"
+        labels_dir = self.config.output_dir / "labels"
+        masks_dir = self.config.output_dir / "masks"
+        for d in (images_dir, labels_dir, masks_dir):
+            d.mkdir(parents=True, exist_ok=True)
+        return images_dir, labels_dir, masks_dir
+
     def _print_header(self) -> None:
         print("\n"+ "="* 80)
-        print("IRCAD PREPROCESSING (VERSION ORIGINALE)")
+        print("IRCAD PREPROCESSING")
         print("="* 80)
         print(f"Input : {self.config.input_dir}")
-        print(f"Output : {self.config.output_dir}")
+        print(f"Output : {self.config.output_dir} (images/ labels/ masks/)")
         print(f"Spacing : {self.config.target_spacing} mm")
         print(f"Masque foie : {'OUI'if self.config.apply_liver_mask else 'NON'}")
         print("="* 80)
 
     @staticmethod
-    def _log_result(pid: str, result: dict) -> None:
+    def _log_result(pid: str, idx: int, result: dict) -> None:
         if result["status"] == "success":
-            print(f"OK {pid}: {result['time_seconds']:.2f}s")
+            print(f"OK {pid} -> patient_{idx:02d} ({result['time_seconds']:.2f}s)")
         else:
             print(f"FAIL {pid}: {result.get('error', 'Erreur')}")
 
-    def _process_patient(self, patient_id: str) -> dict:
+    def _process_patient(self, patient_id: str, idx: int) -> dict:
         start = time.time()
         patient_dir = self.config.input_dir / patient_id
 
@@ -360,16 +368,13 @@ class IRCADPreprocessor:
         if files["ct"] is None:
             return self._fail(patient_id, "Aucune image CT trouvée")
 
-        out_dir = self.config.output_dir / patient_id
-        out_dir.mkdir(exist_ok=True)
-
+        prefix = f"patient_{idx:02d}"
         suffix = "in_liver"if self.config.apply_liver_mask else "original"
         processed: dict = {}
 
-        ct_original, ct_resampled = self._process_ct(files["ct"], out_dir, patient_id, processed)
-        self._process_liver_mask(files.get("liver"), ct_resampled, out_dir, patient_id, processed)
-        self._process_vessel_fused(files.get("vessel_fused"), ct_resampled, out_dir, patient_id, suffix, processed)
-        self._process_individual_vessels(files.get("vessels_individual", []), ct_resampled, out_dir, patient_id, suffix, processed)
+        ct_original, ct_resampled = self._process_ct(files["ct"], prefix, processed)
+        self._process_liver_mask(files.get("liver"), ct_resampled, prefix, processed)
+        self._process_label(files.get("vessel_fused"), files.get("vessels_individual", []), ct_resampled, prefix, processed)
 
         return {
             "patient_id": patient_id,
@@ -384,43 +389,63 @@ class IRCADPreprocessor:
             "time_seconds": time.time() - start,
         }
 
-    def _process_ct(self, ct_path: Path, out_dir: Path, patient_id: str, processed: dict):
+    def _process_ct(self, ct_path: Path, prefix: str, processed: dict):
         print(f"CT : {ct_path.name}")
         ct_original = sitk.ReadImage(str(ct_path))
         ct_resampled = self.resampler.resample_image(ct_original)
 
-        ct_out = out_dir / f"{patient_id}_ct_isotropic.nii.gz"
+        ct_out = self.images_dir / f"{prefix}_images.nii.gz"
         sitk.WriteImage(ct_resampled, str(ct_out))
-        processed["ct"] = str(ct_out)
+        processed["image"] = str(ct_out)
         return ct_original, ct_resampled
 
-    def _process_liver_mask(self, liver_path: Optional[Path], ct_resampled: sitk.Image, out_dir: Path, patient_id: str, processed: dict) -> None:
+    def _process_liver_mask(self, liver_path: Optional[Path], ct_resampled: sitk.Image, prefix: str, processed: dict) -> None:
         if not liver_path:
+            processed["mask"] = None
             return
         print(f"Liver : {liver_path.name}")
         liver = sitk.ReadImage(str(liver_path))
-        liver_out = out_dir / f"{patient_id}_liver_mask_isotropic.nii.gz"
+        liver_out = self.masks_dir / f"{prefix}_liver.nii.gz"
         sitk.WriteImage(self.resampler.resample_mask(liver, reference_image=ct_resampled), str(liver_out))
-        processed["liver_mask"] = str(liver_out)
+        processed["mask"] = str(liver_out)
 
-    def _process_vessel_fused(self, vf_path: Optional[Path], ct_resampled: sitk.Image, out_dir: Path, patient_id: str, suffix: str, processed: dict) -> None:
-        if not vf_path:
+    def _process_label(
+        self,
+        vf_path: Optional[Path],
+        vessel_files: list,
+        ct_resampled: sitk.Image,
+        prefix: str,
+        processed: dict,
+    ) -> None:
+        """
+        Écrit un unique fichier label (fusion des vaisseaux), aligné sur le
+        même schéma plat que images/ et masks/ : labels/patient_XX_label.nii.gz.
+        Utilise vessel_fused s'il existe, sinon fusionne les vaisseaux
+        individuels à la volée.
+        """
+        if vf_path is not None:
+            print(f"Vessels GT : {vf_path.name}")
+            label_img = sitk.ReadImage(str(vf_path))
+        elif vessel_files:
+            print(f"Fusion de {len(vessel_files)} masque(s) vasculaire(s) individuel(s)")
+            fused_array = None
+            reference = None
+            for vfile in vessel_files:
+                v = sitk.ReadImage(str(vfile))
+                arr = sitk.GetArrayFromImage(v) > 0
+                if fused_array is None:
+                    fused_array, reference = arr, v
+                else:
+                    fused_array = fused_array | arr
+            label_img = sitk.GetImageFromArray(fused_array.astype("uint8"))
+            label_img.CopyInformation(reference)
+        else:
+            processed["label"] = None
             return
-        print(f"Vessels GT : {vf_path.name}")
-        vf = sitk.ReadImage(str(vf_path))
-        vf_out = out_dir / f"{patient_id}_vessels_gt_isotropic_{suffix}.nii.gz"
-        sitk.WriteImage(self.resampler.resample_mask(vf, reference_image=ct_resampled), str(vf_out))
-        processed["vessels_gt"] = str(vf_out)
 
-    def _process_individual_vessels(self, vessel_files: list, ct_resampled: sitk.Image, out_dir: Path, patient_id: str, suffix: str, processed: dict) -> None:
-        processed["individual_vessels"] = []
-        for vfile in vessel_files:
-            print(f"Vessel : {vfile.name}")
-            stem = vfile.name.replace(".nii.gz", "").replace(".nii", "")
-            v = sitk.ReadImage(str(vfile))
-            v_out = out_dir / f"{patient_id}_{stem}__{suffix}_isotropic.nii.gz"
-            sitk.WriteImage(self.resampler.resample_mask(v, reference_image=ct_resampled), str(v_out))
-            processed["individual_vessels"].append(str(v_out))
+        label_out = self.labels_dir / f"{prefix}_label.nii.gz"
+        sitk.WriteImage(self.resampler.resample_mask(label_img, reference_image=ct_resampled), str(label_out))
+        processed["label"] = str(label_out)
 
     @staticmethod
     def _fail(patient_id: str, error: str) -> dict:

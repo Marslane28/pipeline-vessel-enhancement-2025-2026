@@ -1,0 +1,48 @@
+================================================================================
+Multi-Dataset Preprocessing Report
+================================================================================
+
+Date : 2026-08-23T12:49:28.442823
+Reference : Vesselness Filters: A Survey with Benchmarks Applied to Liver Imaging (ICPR 2020)
+Spacing : (1.0, 1.0, 1.0)
+
+----------------------------------------
+GLOBAL SUMMARY
+----------------------------------------
+Total patients : 1
+Successfully processed: 1
+Failed : 0
+Total time : 2.37 s
+Average per patient : 2.37 s
+
+----------------------------------------
+SUMMARY BY DATASET
+----------------------------------------
+
+IRCAD
+Patients : 1
+Successful : 1
+Failed : 0
+Total time : 2.37 s
+Avg time : 2.37 s
+
+================================================================================
+DETAILED RESULTS BY DATASET
+================================================================================
+
+============================================================
+IRCAD
+============================================================
+
+Patient : 3Dircadb1.1
+Time : 2.37 s
+Mode : VOLUME ENTIER
+Version : in_liver
+Original spacing: [0.5699999928474426, 0.5699999928474426, 1.600000023841858]
+Original size : [512, 512, 129]
+New spacing : [1.0, 1.0, 1.0]
+New size : [292, 292, 206]
+Files created :
+- image: patient_01_images.nii.gz
+- mask: patient_01_liver.nii.gz
+- label: patient_01_label.nii.gz
