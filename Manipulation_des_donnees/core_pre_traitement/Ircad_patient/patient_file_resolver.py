@@ -2,6 +2,7 @@ from pathlib import Path
 
 import numpy as np
 import SimpleITK as sitk
+import re
 
 
 class PatientFileResolver:
@@ -27,10 +28,16 @@ class PatientFileResolver:
             print(f"Warning: dossier introuvable : {self.input_dir}")
             return []
 
-        patients = sorted(
-            d.name for d in self.input_dir.iterdir()
-            if d.is_dir() and self._looks_like_patient(d)
-        )
+        patients_with_num = []
+        for d in self.input_dir.iterdir():
+            if d.is_dir() and self._looks_like_patient(d):
+                try:
+                    num = int(d.name.split('.')[-1])
+                    patients_with_num.append((num, d.name))
+                except ValueError:
+                     patients_with_num.append((999, d.name))
+        patients_with_num.sort(key=lambda x: x[0])
+        patients = [name for _, name in patients_with_num]
 
         if not patients:
             print(f"Warning: aucun dossier patient trouvé dans {self.input_dir}")
@@ -38,9 +45,10 @@ class PatientFileResolver:
 
         if n_patients and len(patients) > n_patients:
             patients = patients[:n_patients]
-
         return patients
 
+
+    
     def _looks_like_patient(self, patient_dir: Path) -> bool:
         if next(patient_dir.glob("*.nii*"), None) is not None:
             return True
