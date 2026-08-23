@@ -696,7 +696,12 @@ class AnalyticsRunner(AnalyticsBase):
 
         mean, std, all_scores = self._compute_statistics(results, methods, metrics)
         patient_scores = self._get_patient_scores(results_raw)
-        num_patients = len(patient_scores)
+        if methods and results['derivator'][methods[0]]:
+            first_method = methods[0]
+            first_metric = next(iter(results['derivator'][first_method].keys()))
+            num_patients = len(results['derivator'][first_method][first_metric])
+        else:
+            num_patients = len(patient_scores)
         header = self._dataset_header(dataset_name, num_patients)
         unit = self._unit_label(dataset_name)
 
