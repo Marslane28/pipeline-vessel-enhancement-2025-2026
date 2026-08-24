@@ -1,3 +1,4 @@
+# Testé avec Python 3.10.11
 # --- Cœur numérique / IO scientifique ---
 numpy
 scipy
