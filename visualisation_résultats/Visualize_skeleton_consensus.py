@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
 from __future__ import annotations
-
+from tqdm import tqdm
 import argparse
 import itertools
 import pickle
@@ -16,13 +15,19 @@ import pandas as pd
 from scipy import ndimage
 from scipy.ndimage import binary_dilation as ndi_dilation
 from scipy.ndimage import label, find_objects
+import matplotlib.pyplot as plt
+from matplotlib.colors import ListedColormap, BoundaryNorm
+from matplotlib.patches import Patch
+from skimage.morphology import skeletonize
 
 warnings.filterwarnings("ignore")
+import sys
+sys.path.insert(0, "/Users/")
 
 # CONFIGURATION
 
-PROJECT_ROOT = Path(__file__).parent
-OUTPUT_DIR = PROJECT_ROOT / "visualisations_consensus_MFAT_mip"
+PROJECT_ROOT = Path(__file__).parent.parent
+OUTPUT_DIR = PROJECT_ROOT / "visualisations_consensu_frangi_mip"
 OUTPUT_DIR.mkdir(exist_ok=True)
 
 OPERATORS = ['default', 'gaussian', 'farid', 'cubic', 'trigonometric',
@@ -33,7 +38,7 @@ DATASET_LABELS = {
     "bullitt": "Bullitt",
     "vascusynth": "VascuSynth",
 }
-BENCHMARK_ROOT = PROJECT_ROOT / "outputs"
+BENCHMARK_ROOT = PROJECT_ROOT / "outputs"/ "Benchmark_results"
 
 @dataclass
 class DatasetConfig:
@@ -49,30 +54,30 @@ class DatasetConfig:
 
 
 DATASETS: Dict[str, DatasetConfig] = {
-    "bullitt": DatasetConfig(
-        enhancer_dir=BENCHMARK_ROOT / "Jerman"/ "bullitt_enhancer_jerman_2026-07-11_14-25-54",
-        labels_dir=PROJECT_ROOT / "data/bullitt/labels",
-        masks_dir=PROJECT_ROOT / "data/bullitt/masks",
-        case_prefix="patient_", case_suffix="_images.nii",
-        result_prefix="results_patient_", result_suffix="_images.nii",
-        patients=[f"{i:02d}"for i in range(1, 34)],
-    ),
+    #"bullitt": DatasetConfig(
+        #enhancer_dir=BENCHMARK_ROOT / "Jerman"/ "bullitt_enhancer_jerman_2026-07-11_14-25-54",
+        #labels_dir=PROJECT_ROOT / "data/bullitt/labels",
+        #masks_dir=PROJECT_ROOT / "data/bullitt/masks",
+        #case_prefix="patient_", case_suffix="_images.nii",
+        #result_prefix="results_patient_", result_suffix="_images.nii",
+        #patients=[f"{i:02d}"for i in range(1, 34)],
+    #),
     "ircad": DatasetConfig(
-        enhancer_dir=BENCHMARK_ROOT / "Jerman"/ "ircad_enhancer_jerman_2026-07-11_20-39-32",
-        labels_dir=PROJECT_ROOT / "data/ircad/3d-échantillonnées/labels",
-        masks_dir=PROJECT_ROOT / "data/ircad/3d-échantillonnées/masks",
+        enhancer_dir=BENCHMARK_ROOT /"ircad_enhancer_frangi_2026-08-23_15-54-24",
+        labels_dir=PROJECT_ROOT / "data/ircad_preprocessed/labels",
+        masks_dir=PROJECT_ROOT / "data/ircad_preprocessed/masks",
         case_prefix="patient_", case_suffix="_images.nii",
         result_prefix="results_patient_", result_suffix="_images.nii",
         patients=[f"{i:02d}"for i in range(1, 21)],
     ),
-    "vascusynth": DatasetConfig(
-        enhancer_dir=BENCHMARK_ROOT / "Jerman"/ "vascusynth_enhancer_jerman_2026-07-18_09-32-01",
-        labels_dir=PROJECT_ROOT / "data/vascusynth_preprocessed/labels",
-        masks_dir=None,
-        case_prefix="", case_suffix="",
-        result_prefix="results_", result_suffix="",
-        patients=[], has_subdirs=True,
-    ),
+    #"vascusynth": DatasetConfig(
+        #enhancer_dir=BENCHMARK_ROOT / "Jerman"/ "vascusynth_enhancer_jerman_2026-07-18_09-32-01",
+        #labels_dir=PROJECT_ROOT / "data/vascusynth_preprocessed/labels",
+        #masks_dir=None,
+        #case_prefix="", case_suffix="",
+        #result_prefix="results_", result_suffix="",
+        #patients=[], has_subdirs=True,
+    #),
 }
 
 DPI = 180
@@ -252,7 +257,7 @@ def load_ground_truth(dataset: str, case_id: str) -> Optional[np.ndarray]:
                 return None
             gt_path = candidates[0]
     else:
-        candidates = list(cfg.labels_dir.glob(f"*{case_id}*.nii*"))
+        candidates = list(cfg.labels_dir.glob(f"*{case_id}*.nii.gz*"))
         if not candidates:
             return None
         gt_path = candidates[0]
@@ -286,9 +291,11 @@ def init_vascusynth_config():
 
     
 def load_all_metrics(debug: bool = False, with_gt: bool = True) -> pd.DataFrame:
-    init_vascusynth_config()
-    all_rows = []
-    gt_cache: Dict[Tuple[str, str], Optional[np.ndarray]] = {}
+    if "vascusynth" in DATASETS:
+        init_vascusynth_config()
+    
+    all_rows = []  # <-- This MUST be outside the if block
+    gt_cache: Dict[Tuple[str, str], Optional[np.ndarray]] = {}  # <-- This too
 
     for dataset_name, cfg in DATASETS.items():
         print(f"Chargement {dataset_name} ({len(cfg.patients)} patients)...")
@@ -360,9 +367,9 @@ def load_segmentation_for_case(dataset: str, case_id: str) -> Dict[str, Optional
             patient_folder = case_id.split("_rician")[0]
         else:
             patient_folder = case_id
-        patient_dir = cfg.mfat_dir / patient_folder
+        patient_dir = cfg.enhancer_dir / patient_folder
     else:
-        patient_dir = cfg.mfat_dir / f"{cfg.case_prefix}{case_id}{cfg.case_suffix}"
+        patient_dir = cfg.enhancer_dir / f"{cfg.case_prefix}{case_id}{cfg.case_suffix}"
 
     results_dir = patient_dir.parent / "results"
     if not results_dir.exists():
@@ -654,7 +661,7 @@ def plot_operator_consensus_mip(
 
     fig.suptitle(
         f"{DATASET_LABELS[dataset]} - Cas {case_id} - Vrais positifs uniquement\n"
-        f"Consensus de détection entre les {n_ops} opérateurs (projection maximale 3D, recadrée)-Filtre: MFAT",
+        f"Consensus de détection entre les {n_ops} opérateurs (projection maximale 3D, recadrée)-Filtre: Frangi",
         fontsize=12, fontweight="bold"
     )
 
