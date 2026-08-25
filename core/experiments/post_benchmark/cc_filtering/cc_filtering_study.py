@@ -33,7 +33,7 @@ def resolve_patient_files(cfg: CCFilteringConfig, patient_id: str):
         result_file = cfg.results_dir / "results" / f"results_patient_{patient_id}_images.nii"
         mask = None
         if cfg.masks_dir is not None:
-            mask_file = cfg.masks_dir / f"patient_{patient_id}_brain.nii.gz"
+            mask_file = cfg.masks_dir / f"patient_{patient_id}_liver.nii.gz"
             mask = nib.load(mask_file).get_fdata() > 0.5 if mask_file.exists() else None
 
     if (img_file is None or not Path(img_file).exists() or not label_file.exists()
