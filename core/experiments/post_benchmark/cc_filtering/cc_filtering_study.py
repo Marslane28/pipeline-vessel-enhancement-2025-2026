@@ -23,14 +23,14 @@ def resolve_patient_files(cfg: CCFilteringConfig, patient_id: str):
             img_file = candidates[0] if candidates else None
         label_file = cfg.labels_dir / patient_id / f"{patient_id}_vessels_gt.nii.gz"
         mask = None
-        result_file = cfg.results_dir / f"results_{patient_id}_rician_{cfg.noise_level:.1f}.nii"
+        result_file = cfg.results_dir / "results" / f"results_patient_{patient_id}_images.nii"
         if not result_file.exists():
             candidates = list(cfg.results_dir.glob(f"results_{patient_id}_*.nii"))
             result_file = candidates[0] if candidates else None
     else:  # bullitt / ircad - même convention de nommage
         img_file = cfg.images_dir / f"patient_{patient_id}_images.nii.gz"
         label_file = cfg.labels_dir / f"patient_{patient_id}_label.nii.gz"
-        result_file = cfg.results_dir / f"results_patient_{patient_id}_images.nii"
+        result_file = cfg.results_dir / "results" / f"results_patient_{patient_id}_images.nii"
         mask = None
         if cfg.masks_dir is not None:
             mask_file = cfg.masks_dir / f"patient_{patient_id}_brain.nii.gz"
