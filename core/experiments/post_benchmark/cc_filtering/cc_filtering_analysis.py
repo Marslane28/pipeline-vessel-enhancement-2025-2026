@@ -27,7 +27,6 @@ def plot_metrics_vs_min_size(df, output_dir, metrics=None, filename="metrics_vs_
             stds = [sub[sub.min_size == ms][metric].std() for ms in min_sizes]
             means, stds = np.array(means), np.array(stds)
             ax.plot(min_sizes, means, marker='o', label=op, linewidth=1.5)
-            ax.fill_between(min_sizes, means - stds, means + stds, alpha=0.12)
         ax.set_title(metric)
         ax.set_xlabel("min_size")
         ax.grid(alpha=0.3)
