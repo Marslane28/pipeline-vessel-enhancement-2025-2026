@@ -164,5 +164,6 @@ def run_cc_filtering_study(cfg: CCFilteringConfig):
 
     if cfg.generate_figure:
         plot_metrics_vs_min_size(df_all, cfg.output_dir)
+        print(f"Figure saved in {cfg.output_dir}")
 
     return df_all
