@@ -4,6 +4,7 @@ import itertools
 import pickle
 import re
 import sys
+import time
 import warnings
 from dataclasses import dataclass
 from pathlib import Path
@@ -17,7 +18,7 @@ from tqdm import tqdm
 
 warnings.filterwarnings("ignore")
 
-PROJECT_ROOT = Path(__file__).parent.parent.parent.parent
+PROJECT_ROOT = Path(__file__).parent.parent.parent.parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
@@ -135,18 +136,6 @@ def _to_runtime_config(raw: PostBenchTestsDatasetConfig) -> DatasetConfig:
 
 
 def load_datasets(config_dir: Union[str, Path]) -> Dict[str, DatasetConfig]:
-    """Charge un DatasetConfig par fichier YAML trouvé dans config_dir
-    (un fichier par dataset : bullitt.yaml, ircad.yaml, vascusynth.yaml
-    cf. configs/postbench_tests/). Le nom du dataset est déduit du nom de
-    fichier (bullitt.yaml -> "bullitt"), donc le nom du fichier doit
-    correspondre à une clé attendue par le reste du module (bullitt/ircad/
-    vascusynth).
-
-    Remplace, sans le modifier ailleurs, le contenu du dict DATASETS
-    à charge de l'appelant (cf. main() / run_post_benchmark_tests) de faire
-    DATASETS.clear(); DATASETS.update(load_datasets(...)) s'il veut
-    remplacer les chemins codés en dur ci-dessus.
-    """
     config_dir = Path(config_dir)
     if not config_dir.exists():
         raise FileNotFoundError(f"Dossier de configs post-tests introuvable : {config_dir}")
@@ -471,10 +460,10 @@ def compute_components_after_filter(seg: np.ndarray, gt: Optional[np.ndarray],
 
     # Filtrage
     seg_filtered = remove_small_components_3d(seg, min_size)
-    
+
     conn_raw = connected_components_metrics(seg, gt) if gt is not None else connected_components_metrics(seg, seg)
     conn_filtered = connected_components_metrics(seg_filtered, gt) if gt is not None else connected_components_metrics(seg_filtered, seg_filtered)
-    
+
     result = {
         'n_components_raw': conn_raw.get('n_components_pred', 0),
         'n_components_filtered': conn_filtered.get('n_components_pred', 0),
@@ -488,7 +477,7 @@ def compute_components_after_filter(seg: np.ndarray, gt: Optional[np.ndarray],
     if gt is not None and gt.shape == seg.shape:
         metrics_raw = detailed_metrics(seg, gt, metrics=["dice", "cldice"])
         metrics_filtered = detailed_metrics(seg_filtered, gt, metrics=["dice", "cldice"])
-        
+
         result['dice_raw'] = metrics_raw['dice']
         result['dice_filtered'] = metrics_filtered['dice']
         result['cldice_raw'] = metrics_raw['cldice']
@@ -498,7 +487,6 @@ def compute_components_after_filter(seg: np.ndarray, gt: Optional[np.ndarray],
         result['cldice_raw'] = result['cldice_filtered'] = np.nan
 
     return result
-    return result
 
 
 def analyze_filtering_impact_small_components(df_metrics: pd.DataFrame) -> Dict[str, Any]:
@@ -507,7 +495,14 @@ def analyze_filtering_impact_small_components(df_metrics: pd.DataFrame) -> Dict[
         sub = df_metrics[df_metrics['dataset'] == dataset]
         dataset_results = []
 
-        for _, row in sub.iterrows():
+        # [INSTRUMENTATION] boucle potentiellement lente (detailed_metrics
+        # est appelé 2x par ligne, dont clDice qui squelettise) : tqdm rend
+        # visible la progression et le case_id/operator courant au lieu de
+        # rester silencieux. Aucun changement de calcul.
+        rows = list(sub.iterrows())
+        pbar = tqdm(rows, desc=f"Test 1bis {dataset}", total=len(rows))
+        for _, row in pbar:
+            pbar.set_postfix_str(f"case={row['case_id']} op={row['operator']}")
             seg = row.get('segmentation')
             if seg is None:
                 continue
@@ -524,7 +519,7 @@ def analyze_filtering_impact_small_components(df_metrics: pd.DataFrame) -> Dict[
             # Maintenant dice_raw, dice_filtered, cldice_raw, cldice_filtered existent
             df_results['dice_delta'] = df_results['dice_filtered'] - df_results['dice_raw']
             df_results['cldice_delta'] = df_results['cldice_filtered'] - df_results['cldice_raw']
-            
+
             agg = df_results.groupby('operator').agg({
                 'n_components_raw': 'mean', 'n_components_filtered': 'mean',
                 'removed_ratio': 'mean',
@@ -747,10 +742,14 @@ def analyze_threshold_distribution(df_metrics: pd.DataFrame) -> Dict[str, Any]:
 # squelette/bifurcations calculés sur le GT ; on mesure si op2
 # réduit ou augmente l'erreur (vs GT) sur ces voxels topologiquement
 # importants, par rapport à op1.
-# [OPTIM] Le squelette et les points de bifurcation du GT ne dépendent que
+# Le squelette et les points de bifurcation du GT ne dépendent que
 # de case_id, pas de la paire (op1, op2). Auparavant ils étaient recalculés
 # à chaque comparaison (6 paires x tous les cas) alors que le même case_id
 # revient dans plusieurs paires -> mise en cache par case_id.
+# Idem pour le squelette d'une SEGMENTATION prédite :
+# _skeletonize_3d(seg1) / _skeletonize_3d(seg2) sont des fonctions pures
+# (même entrée -> même sortie). Or un même (case_id, operator) revient
+# comme seg1 et/ou seg2 dans plusieurs des 6 paires de comparaison.
 
 def analyze_critical_changes(df_metrics: pd.DataFrame,
                               comparisons: List[Tuple[str, str]] = None) -> Dict[str, Any]:
@@ -766,16 +765,25 @@ def analyze_critical_changes(df_metrics: pd.DataFrame,
     for dataset in df_metrics['dataset'].unique():
         sub = df_metrics[df_metrics['dataset'] == dataset]
         critical_data = []
-        # Cache pour les squelettes et bifurcations du GT
         critical_cache: Dict[Any, Tuple[np.ndarray, int, np.ndarray]] = {}
+        seg_skel_cache: Dict[Tuple[Any, str], np.ndarray] = {}
 
-        for op1, op2 in comparisons:
+        def _get_seg_skeleton(case_id: Any, operator: str, seg: np.ndarray) -> np.ndarray:
+            key = (case_id, operator)
+            if key not in seg_skel_cache:
+                seg_skel_cache[key] = _skeletonize_3d(seg)
+            return seg_skel_cache[key]
+
+        for op1, op2 in tqdm(comparisons, desc=f"Test 5 {dataset} (paires)"):
             data1 = sub[sub['operator'] == op1]
             data2 = sub[sub['operator'] == op2]
             if data1.empty or data2.empty:
                 continue
 
-            for _, row1 in data1.iterrows():
+            rows1 = list(data1.iterrows())
+            pbar = tqdm(rows1, desc=f"  {op1} vs {op2}", leave=False)
+            for _, row1 in pbar:
+                pbar.set_postfix_str(f"case={row1['case_id']}")
                 row2_match = data2[data2['case_id'] == row1['case_id']]
                 if row2_match.empty:
                     continue
@@ -805,14 +813,14 @@ def analyze_critical_changes(df_metrics: pd.DataFrame,
                 # on utilise les squelettes déjà calculés via le cache
                 bif_metrics1 = bifurcation_detection_rate(
                     seg1, gt,
-                    _s_pred=_skeletonize_3d(seg1),
+                    _s_pred=_get_seg_skeleton(case_key, op1, seg1),
                     _s_gt=skel_gt,
                     tolerance_radius=3,
                     bifurcation_threshold=3
                 )
                 bif_metrics2 = bifurcation_detection_rate(
                     seg2, gt,
-                    _s_pred=_skeletonize_3d(seg2),
+                    _s_pred=_get_seg_skeleton(case_key, op2, seg2),
                     _s_gt=skel_gt,
                     tolerance_radius=3,
                     bifurcation_threshold=3
@@ -876,15 +884,15 @@ def report_critical_changes(results: Dict[str, Any]) -> str:
         lines.append(f"Erreur moyenne sur voxels critiques - op2 : {r['summary']['mean_error2_ratio']*100:.2f}%")
         lines.append(f"BDR moyen - op1 : {r['summary'].get('mean_bdr_1', np.nan)*100:.2f}%")
         lines.append(f"BDR moyen - op2 : {r['summary'].get('mean_bdr_2', np.nan)*100:.2f}%")
-        
+
         c1 = r['correlations']['delta_error_critical_vs_delta_dice']
         c2 = r['correlations']['delta_error_critical_vs_delta_fragmentation']
         c3 = r['correlations'].get('delta_error_critical_vs_delta_bdr', {'r': np.nan, 'p': np.nan})
-        
+
         lines.append(f"Corr. delta erreur_critique / delta Dice : r={c1['r']:.3f}, p={c1['p']:.4f}")
         lines.append(f"Corr. delta erreur_critique / delta fragmentation : r={c2['r']:.3f}, p={c2['p']:.4f}")
         lines.append(f"Corr. delta erreur_critique / delta BDR : r={c3['r']:.3f}, p={c3['p']:.4f}")
-        
+
         if c1['r'] < -0.2 and c1['p'] < 0.05:
             lines.append("-> Réduire l'erreur sur les voxels critiques améliore bien le Dice réel (cohérent).")
         if c2['r'] > 0.2 and c2['p'] < 0.05:
@@ -1031,7 +1039,7 @@ def bootstrap_mediation(df_med: pd.DataFrame, n_boot: int = 2000, seed: int = 42
     groups = {cid: g for cid, g in df_med.groupby("case_id")}
 
     boot_indirect = np.empty(n_boot)
-    for i in range(n_boot):
+    for i in tqdm(range(n_boot), desc="Bootstrap médiation", leave=False):
         sampled = rng.choice(case_ids, size=n_cases, replace=True)
         boot_df = pd.concat([groups[c] for c in sampled], ignore_index=True)
         try:
@@ -1141,7 +1149,7 @@ def analyze_sweep_results(df_sweep: pd.DataFrame) -> Dict:
 def generate_full_report(df_metrics, filtering_results, filtering_small_results,
                           proximity_results, mediation_results, threshold_results,
                           critical_results, op_diff_results) -> str:
-    lines = ["="* 80, "RAPPORT POST-BENCHMARK - VERSION FUSIONNÉE, ANCRÉE AU GT", "="* 80, "",
+    lines = ["="* 80, "RAPPORT POST-BENCHMARK -  ANCRÉE AU GT", "="* 80, "",
              f"Nombre total de lignes chargées : {len(df_metrics)}",
              f"Datasets : {df_metrics['dataset'].unique().tolist()}",
              f"Opérateurs : {df_metrics['operator'].unique().tolist()}",
@@ -1237,13 +1245,22 @@ def run_post_benchmark_tests(dataset: Optional[str] = None, output: Optional[str
             return 1
 
     print("\nAnalyse des tests...")
-    filtering_results = analyze_filtering_impact(df_metrics)
-    filtering_small_results = analyze_filtering_impact_small_components(df_metrics)
-    proximity_results = analyze_threshold_proximity(df_metrics)
-    mediation_results = analyze_mediation(df_metrics)
-    threshold_results = analyze_threshold_distribution(df_metrics)
-    critical_results = analyze_critical_changes(df_metrics)
-    op_diff_results = analyze_operator_differences(df_metrics)
+
+    # chronométrage de chaque étape - permet de voir en
+    # direct où le temps est passé, sans rien changer aux calculs.
+    def _timed(label, fn, *args, **kwargs):
+        t0 = time.time()
+        result = fn(*args, **kwargs)
+        print(f"  [{label}] terminé en {time.time() - t0:.1f}s", flush=True)
+        return result
+
+    filtering_results = _timed("Test 1", analyze_filtering_impact, df_metrics)
+    filtering_small_results = _timed("Test 1bis", analyze_filtering_impact_small_components, df_metrics)
+    proximity_results = _timed("Test 2", analyze_threshold_proximity, df_metrics)
+    mediation_results = _timed("Test 3", analyze_mediation, df_metrics)
+    threshold_results = _timed("Test 4", analyze_threshold_distribution, df_metrics)
+    critical_results = _timed("Test 5", analyze_critical_changes, df_metrics)
+    op_diff_results = _timed("Test (b) Friedman", analyze_operator_differences, df_metrics)
 
     report = generate_full_report(df_metrics, filtering_results, filtering_small_results,
                                    proximity_results, mediation_results, threshold_results,
@@ -1259,8 +1276,9 @@ def run_post_benchmark_tests(dataset: Optional[str] = None, output: Optional[str
         sub_med = df_med[df_med["dataset"] == ds]
         if sub_med.empty:
             continue
+        t0 = time.time()
         res = bootstrap_mediation(sub_med, n_boot=2000)
-        print(f"\n{ds.upper()}")
+        print(f"\n{ds.upper()} (en {time.time() - t0:.1f}s)")
         print(f"n clusters = {res['n_clusters']}, effet indirect (a*b) = {res['indirect_effect_ab']:.4f}")
         print(f"IC 95% bootstrap = [{res['indirect_ci_95'][0]:.4f}, {res['indirect_ci_95'][1]:.4f}]")
         print(f"% médié = {res['proportion_mediated']*100:.1f}% -> {res['interpretation']}")
